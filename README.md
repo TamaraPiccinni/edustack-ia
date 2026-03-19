@@ -1,16 +1,25 @@
-# React + Vite
+# EduStack IA
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Gestor Inteligente de Contenidos Educativos diseñado para optimizar el tiempo docente mediante Inteligencia Artificial. Permite transformar apuntes técnicos (como manuales de Hardware o Emprendimiento) en cuestionarios, rúbricas y resúmenes de forma automática.
 
-Currently, two official plugins are available:
+## Tecnologías (Stack 2026)
+Este proyecto está construido con las herramientas más modernas y rápidas del ecosistema web:
+* **Frontend:** React + Vite
+* **Estilos:** Tailwind CSS (v4)
+* **Animaciones:** Framer Motion
+* **Íconos:** Lucide React
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Requisitos Previos
+* [Node.js](https://nodejs.org/) (Versión 20.19.0 o superior).
+* Visual Studio Code (VSC).
 
-## React Compiler
+## Instalación y Configuración desde Cero
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Sigue estos pasos para replicar la arquitectura base del proyecto:
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### 1. Inicializar el Proyecto
+Abre tu terminal y ejecuta el comando de Vite para crear la estructura de React:
+```bash
+npm create vite@latest edustack-ia -- --template react
+cd edustack-ia
+npm install

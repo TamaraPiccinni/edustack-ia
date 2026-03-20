@@ -11,7 +11,7 @@ function App() {
 
       <main className="flex-1 p-8 overflow-y-auto">
         <header className="mb-8">
-          <h1 className="text-3xl font-bold">Bienvenida, Profe 👋</h1>
+          <h1 className="text-3xl font-bold">Bienvenida</h1>
           <p className="text-gray-400 mt-1">¿Qué contenido vamos a procesar hoy?</p>
         </header>
 

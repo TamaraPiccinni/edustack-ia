@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Sparkles, FileText, Send, Loader2, CheckCircle, Copy, Download, UploadCloud } from 'lucide-react'; // Añadimos UploadCloud
+import { Sparkles, FileText, Send, Loader2, CheckCircle, Copy, Download, UploadCloud } from 'lucide-react'; 
 import { Document, Packer, Paragraph, TextRun } from "docx";
 import { saveAs } from "file-saver";
+
 // IMPORTAMOS EL LECTOR DE PDF
 import * as pdfjsLib from 'pdfjs-dist';
 // Vite nos permite importar la ruta exacta del worker local usando "?url" al final
@@ -10,7 +11,8 @@ import workerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url';
 // Le pasamos la ruta local segura
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 
-export function AIGenerator() {
+// AHORA RECIBIMOS LA PROP 'onGenerarExito'
+export function AIGenerator({ onGenerarExito }) {
     // --- 1. ESTADO (Memoria del componente) ---
     const [titulo, setTitulo] = useState('');
     const [contenido, setContenido] = useState('');
@@ -18,44 +20,33 @@ export function AIGenerator() {
     const [cargando, setCargando] = useState(false);
     const [resultado, setResultado] = useState('');
     const [copiado, setCopiado] = useState(false);
-
-    // NUEVO ESTADO: Para mostrar el nombre del PDF cargado
     const [nombreArchivo, setNombreArchivo] = useState('');
+
     // --- LÓGICA PARA LEER PDFs LOCALMENTE ---
     const manejarSubidaPDF = async (evento) => {
-        // 1. Atrapamos el archivo que el usuario seleccionó
         const archivo = evento.target.files[0];
         if (!archivo) return;
 
-        // Verificamos que realmente sea un PDF
         if (archivo.type !== 'application/pdf') {
             alert('Por favor, sube solo archivos PDF.');
             return;
         }
 
         setNombreArchivo(archivo.name);
-        setCargando(true); // Usamos el spinner mientras lee
+        setCargando(true); 
 
         try {
-            // 2. Convertimos el archivo a un formato que PDF.js pueda entender (ArrayBuffer)
             const buffer = await archivo.arrayBuffer();
-
-            // 3. Cargamos el documento
             const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
-
             let textoCompleto = '';
 
-            // 4. Bucle: Leemos el PDF página por página
             for (let i = 1; i <= pdf.numPages; i++) {
                 const pagina = await pdf.getPage(i);
                 const contenidoPagina = await pagina.getTextContent();
-
-                // Juntamos todos los pedacitos de texto de esa página
                 const textoPagina = contenidoPagina.items.map(item => item.str).join(' ');
                 textoCompleto += textoPagina + '\n\n';
             }
 
-            // 5. ¡Magia! Ponemos todo el texto extraído directamente en nuestra caja de texto
             setContenido(textoCompleto);
 
         } catch (error) {
@@ -63,10 +54,10 @@ export function AIGenerator() {
             alert('Hubo un error al intentar leer el PDF. Puede que esté protegido o corrupto.');
         } finally {
             setCargando(false);
-            // Reseteamos el input de archivo para que deje subir el mismo de nuevo si quiere
             evento.target.value = '';
         }
     };
+
     // --- 2. LÓGICA DE LA IA (Petición a Google Gemini) ---
     const manejarEnvio = async (evento) => {
         evento.preventDefault();
@@ -96,7 +87,20 @@ export function AIGenerator() {
             const datos = await respuestaServidor.json();
 
             if (datos.candidates && datos.candidates[0].content.parts[0].text) {
-                setResultado(datos.candidates[0].content.parts[0].text);
+                const textoExtraido = datos.candidates[0].content.parts[0].text;
+                setResultado(textoExtraido);
+
+                // --- ¡AQUÍ ESTÁ LA MAGIA DEL HISTORIAL! ---
+                // Si la función existe (se pasó desde App.jsx), la ejecutamos
+                if (onGenerarExito) {
+                    onGenerarExito({
+                        id: Date.now(), // Usamos la fecha actual en milisegundos como ID único
+                        titulo: titulo || 'Documento sin título', // Título de respaldo
+                        accion: accion, // La opción que eligió en el select
+                        fecha: new Date().toLocaleDateString() // Fecha bonita para mostrar
+                    });
+                }
+                
             } else {
                 setResultado("Hubo un error al leer la respuesta de la IA. Revisa la consola.");
             }
@@ -109,46 +113,38 @@ export function AIGenerator() {
     };
 
     // --- 3. LÓGICA DE EXPORTACIÓN Y OFIMÁTICA ---
-
-    // Función A: Copiar al Portapapeles (API del Navegador)
     const copiarTexto = async () => {
         try {
             await navigator.clipboard.writeText(resultado);
-            setCopiado(true); // Cambia el texto del botón a "¡Copiado!"
-            setTimeout(() => setCopiado(false), 2000); // Lo restaura a los 2 segundos
+            setCopiado(true);
+            setTimeout(() => setCopiado(false), 2000); 
         } catch (err) {
             console.error('Error al copiar: ', err);
             alert('No se pudo copiar el texto.');
         }
     };
 
-    // Función B: Crear y Descargar archivo de Word (.docx)
     const descargarWord = async () => {
-        // a. Construimos la estructura interna del documento Word
         const doc = new Document({
             sections: [{
                 properties: {},
                 children: [
-                    // Título del documento
                     new Paragraph({
                         children: [
                             new TextRun({
                                 text: `Material EduStack: ${accion.toUpperCase()}`,
                                 bold: true,
-                                size: 28, // Tamaño 14pt
+                                size: 28,
                             }),
                         ],
-                        spacing: { after: 400 }, // Espacio debajo del título
+                        spacing: { after: 400 }, 
                     }),
-
-                    // b. Mapeamos el texto de la IA
-                    // Dividimos el texto por cada salto de línea (\n) y creamos un párrafo de Word
                     ...resultado.split('\n').map(linea => {
                         return new Paragraph({
                             children: [
                                 new TextRun({
                                     text: linea,
-                                    size: 22, // Tamaño 11pt
+                                    size: 22, 
                                 })
                             ],
                             spacing: { after: 120 },
@@ -158,9 +154,8 @@ export function AIGenerator() {
             }],
         });
 
-        // c. Empaquetamos y forzamos la descarga
         const blob = await Packer.toBlob(doc);
-        saveAs(blob, `EduStack-${accion}.docx`);
+        saveAs(blob, `EduStack-Material.docx`); // Simplifiqué un poco el nombre del archivo
     };
 
 
@@ -181,14 +176,11 @@ export function AIGenerator() {
                     <input type="text" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ej: Arquitectura ESP32..." className="w-full bg-dark border border-gray-700 rounded-lg p-3 text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-brand transition-all" />
                 </div>
 
-                {/* BLOQUE 2: ÁREA DE TEXTO Y CARGA DE PDF */}
                 <div>
                     <div className="flex items-center justify-between mb-2">
                         <label className="block text-sm font-medium text-gray-400">
                             Contenido Base
                         </label>
-
-                        {/* El botón "falso" que dispara el input de archivo oculto */}
                         <label className="cursor-pointer text-sm text-brand hover:text-blue-400 flex items-center gap-2 bg-brand/10 px-3 py-1 rounded transition-colors">
                             <UploadCloud size={16} />
                             {nombreArchivo ? 'Cambiar PDF' : 'Subir PDF'}
@@ -201,7 +193,6 @@ export function AIGenerator() {
                         </label>
                     </div>
 
-                    {/* Mensaje visual de éxito si subió un archivo */}
                     {nombreArchivo && (
                         <p className="text-xs text-green-400 mb-2">
                             📄 Archivo cargado: {nombreArchivo} (Puedes editar el texto extraído abajo)
@@ -239,15 +230,11 @@ export function AIGenerator() {
             {/* --- ZONA DE RESULTADO Y EXPORTACIÓN --- */}
             {resultado && (
                 <div className="mt-8 bg-dark border border-brand/30 rounded-lg shadow-inner overflow-hidden">
-
-                    {/* Barra de herramientas superior */}
                     <div className="bg-gray-800/50 px-6 py-3 border-b border-gray-800 flex items-center justify-between">
                         <h4 className="text-sm font-bold text-brand uppercase tracking-wider flex items-center gap-2">
                             <CheckCircle size={16} />
                             Resultado Listo
                         </h4>
-
-                        {/* Botones de acción (Copiar y Word) */}
                         <div className="flex gap-2">
                             <button
                                 onClick={copiarTexto}
@@ -257,7 +244,6 @@ export function AIGenerator() {
                                 <Copy size={16} />
                                 {copiado ? '¡Copiado!' : 'Copiar'}
                             </button>
-
                             <button
                                 onClick={descargarWord}
                                 type="button"
@@ -268,15 +254,11 @@ export function AIGenerator() {
                             </button>
                         </div>
                     </div>
-
-                    {/* Caja de texto generada */}
                     <div className="p-6 text-gray-300 whitespace-pre-wrap leading-relaxed max-h-[500px] overflow-y-auto">
                         {resultado}
                     </div>
-
                 </div>
             )}
-
         </div>
     );
 }
